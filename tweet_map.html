@@ -1,0 +1,184 @@
+<html>
+<style>
+    .labeltext {
+         font-family: Arial, Helvetica, sans-serif;
+         font-size: 8px;
+    }
+    .hidden {
+    	display:none;
+    }
+    #map-1 { height: 600px; }
+    #map-2 { height: 600px; }
+
+    .info {
+	    padding: 6px 8px;
+	    font: 14px/16px Arial, Helvetica, sans-serif;
+	    background: white;
+	    background: rgba(255,255,255,0.8);
+	    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+	    border-radius: 5px;
+	}
+	.info h4 {
+    	margin: 0 0 5px;
+    	color: #777;
+	}
+
+	.legend {
+    line-height: 18px;
+    color: #555;
+}
+i {
+    width: 18px;
+    height: 18px;
+    float: left;
+    margin-right: 8px;
+    opacity: 0.9;
+}
+.hidden {
+	display : none;
+}
+
+
+body {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+}
+
+#control-panel-race {
+  font-family: Helvetica, Arial, sans-serif;
+  position: absolute;
+  background: #fff;
+  top: 15vh;
+  left: 0;
+  margin: 12px;
+  padding: 20px;
+  z-index: 1;
+}
+
+label {
+  display: inline-block;
+  width: 140px;
+}
+
+#title {
+  font-family: Helvetica, Arial, sans-serif;
+  position: absolute;
+  background: #fff;
+  top: 1vh;
+  left: 0vw;
+  margin: 12px;
+  padding: 20px;
+  z-index: 1;
+}
+
+
+
+.deck-tooltip {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  position: absolute;
+  padding: 4px;
+  margin: 8px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  max-width: 300px;
+  font-size: 10px;
+  z-index: 9;
+  pointer-events: none;
+}
+
+</style>
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+<link rel="stylesheet" href="src/leaflet/leaflet.css" />
+<h5 id="title" align="center">GeoTagged Tweet Locations</h5>
+
+<body>
+	<div class="container-fluid">
+
+		<div class="row">
+
+			<div class="col-12" >
+					<div class="col-12 hidden" id="loading-div" align="center">
+						<img src="big-ajax-loader.gif">
+					</div>
+					<div class="col-12">
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+</body>
+
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+<script type="text/javascript" src="src/d3.v5.js"></script>
+<script type="text/javascript" src="src/crossfilter.js"></script>
+<script type="text/javascript" src="src/dc.js"></script>
+<script src="src/leaflet/leaflet.js"></script>
+<script type="text/javascript" src="http://d3js.org/queue.v1.min.js"></script>
+<script type="text/javascript" src="http://d3js.org/topojson.v1.min.js"></script>
+
+<script src="https://unpkg.com/deck.gl@latest/dist.min.js"></script>
+<!-- optional if mapbox base map is needed -->
+<script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.53.0/mapbox-gl.js'></script>
+<link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.53.0/mapbox-gl.css' rel='stylesheet' />
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@5/turf.min.js"></script>
+
+<script>
+
+async function wrapper(){
+
+	var dformat = d3.format('.3f')
+	var pformat = d3.format('.2%')
+
+	var tweet_locs = await d3.json('geo_tweet.json')
+  console.log(tweet_locs)
+
+	$('#loading-div').addClass("hidden")
+	
+  const mapboxAccessToken = 'pk.eyJ1IjoiZXpyYWVkZ2VydG9uIiwiYSI6ImNrNndpeTJ4eDA2NDEzbm52NG5jeTAyeDAifQ.IaHIVaAkQ_dEGVBtoSA9xw'
+
+  new deck.DeckGL({
+  mapboxApiAccessToken: mapboxAccessToken,
+  mapStyle: 'mapbox://styles/mapbox/light-v9',
+  initialViewState: {
+    longitude: -74,
+    latitude: 40.76,
+    zoom: 1,
+    maxZoom: 16
+  },
+  controller: true,
+  layers: [
+    new deck.ScatterplotLayer({
+      id: 'scatter-plot',
+      data: tweet_locs,
+      radiusScale: 1000,
+      radiusMinPixels: 1,
+      getPosition: function(d){
+        return [d.geo.coordinates[0], d.geo.coordinates[1], 0]
+      },
+      getColor: d => [0,0,0],
+      pickable: true
+    })
+
+  ],
+  getTooltip
+});
+
+function getTooltip({object}) {
+  return object && `Tweet: ${object.text}`
+/*  return object && `Zip Code ${object.properties.co2obj.ZipCode}
+ Household Carbon Footprint
+${object.properties.co2obj[" Total Household Carbon Footprint (tCO2e/yr) "]}
+% white
+${pformat(object.properties.raceobj.percent_white))}`;*/
+}
+
+}//wrapper
+
+wrapper()	
+</script>
